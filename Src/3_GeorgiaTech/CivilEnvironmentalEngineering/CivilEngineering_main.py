@@ -1,30 +1,36 @@
 import requests
 from bs4 import BeautifulSoup
 import csv
+from urllib.parse import urljoin
 
 # Base URL of the page to scrape
-base_url = "https://www.cc.gatech.edu/people/faculty"
+base_url = "https://ce.gatech.edu/people"
 
 
 # Function to get links from a single page
-def get_links_from_page(url):
+def fetch_urls_from_page(page_number):
+    if page_number == 0:
+        url = base_url
+    else:
+        url = f"{base_url}?page={page_number}"
+
     links = []
     response = requests.get(url)
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, 'html.parser')
-        h4_tags = soup.find_all('h4', class_='card-block__title')
-        for h4 in h4_tags:
-            a_tag = h4.find('a')
-            if a_tag and 'href' in a_tag.attrs:
-                href = a_tag['href']
-                if href.startswith('/'):
-                    full_url = f"https://www.cc.gatech.edu{href}"
-                else:
-                    full_url = href
+        # Find all anchor tags with href attributes that match the pattern we're interested in
+        anchors = soup.find_all('a', href=True)
+
+        for anchor in anchors:
+            relative_url = anchor['href']
+            if relative_url.startswith(
+                    '/directory'):  # Adjust this condition based on the pattern you expect
+                full_url = urljoin(base_url, relative_url)
                 links.append(full_url)
     else:
         print(
             f"Failed to retrieve the page. Status code: {response.status_code}")
+
     return links
 
 
@@ -33,10 +39,9 @@ def scrape_all_links():
     page_number = 0
     all_links = []
 
-    while True:
-        page_url = f"{base_url}?page={page_number}"
-        print(f"Scraping page {page_number}: {page_url}")
-        links = get_links_from_page(page_url)
+    while page_number < 10:  # Loop through 10 pages (0 to 9)
+        print(f"Scraping page {page_number}: {base_url}?page={page_number}")
+        links = fetch_urls_from_page(page_number)
         if not links:
             break
         all_links.extend(links)
@@ -53,7 +58,7 @@ data = []
 for link in all_links:
     profile = {
         'University': 'GeorgiaTech',
-        'Department': 'Computing Engineering',
+        'Department': 'Civil and Environmental Engineering',
         'Name': 'N/A',
         'Position': 'N/A',
         'Link': link,
@@ -63,7 +68,7 @@ for link in all_links:
     data.append(profile)
 
 # Define the CSV file name
-csv_file = r'D:\Files\Upwork\Scrape\Us_30_Uni_engineering\Src\3_GeorgiaTech\ComputingEngineering\profiles_urls.csv'
+csv_file = r'D:\Files\Upwork\Scrape\Us_30_Uni_engineering\Src\3_GeorgiaTech\CivilEnvironmentalEngineering\profiles_urls1.csv'
 
 # Specify the headers/column names
 headers = ['University', 'Department', 'Name', 'Position', 'Link', 'Email',
